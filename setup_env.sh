@@ -110,7 +110,7 @@ fi
 cat <<EOF > oci.env
 # OCI Configuration
 OCI_CONFIG=$PROJECT_DIR/oci_config
-OCT_FREE_AD=AD-1
+OCT_FREE_AD=AD-1,AD-2,AD-3
 DISPLAY_NAME="$INSTANCE_NAME"
 # The other free shape is AMD: VM.Standard.E2.1.Micro
 OCI_COMPUTE_SHAPE=$SHAPE
