@@ -101,9 +101,12 @@ if not OCI_USER_ID:
 
 # Set up logging
 logging.basicConfig(
-    filename="setup_and_info.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("setup_and_info.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 logging_step5 = logging.getLogger("launch_instance")
 logging_step5.setLevel(logging.INFO)
