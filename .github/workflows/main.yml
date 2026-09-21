@@ -5,7 +5,7 @@ on:
   schedule:
     # Deliberately not on :00 to avoid concentrating with other hourly jobs.
     # GitHub may still delay scheduled workflows under platform load.
-    - cron: '50 * * * *'
+    - cron: '54 * * * *'
 
 concurrency:
   group: oci-instance-hunter
