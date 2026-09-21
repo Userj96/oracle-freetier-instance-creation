@@ -352,6 +352,7 @@ def launch_instance():
     logging.info("OCI_SUBNET_ID: %s", oci_subnet_id)
 
     image_display_name = "provided via OCI_IMAGE_ID"
+    # Step 4 - Get Image ID of Compute Shape
     if not OCI_IMAGE_ID:
         images = execute_oci_command(
             compute_client,
@@ -359,42 +360,58 @@ def launch_instance():
             compartment_id=oci_tenancy,
             shape=OCI_COMPUTE_SHAPE,
         )
-        shortened_images = [{key: json.loads(str(image))[key] for key in IMAGE_LIST_KEYS}
-                            for image in images]
-        write_into_file('images_list.json', json.dumps(shortened_images, indent=2))
 
+        shortened_images = [
+            {key: json.loads(str(image))[key] for key in IMAGE_LIST_KEYS}
+            for image in images
+        ]
+        write_into_file(
+            'images_list.json',
+            json.dumps(shortened_images, indent=2)
+        )
+
+        # OCI reports Minimal aarch64 images with the OS version
+        # "24.04 Minimal aarch64", while the dated image name contains
+        # the actual release date.
         matching_images = [
             image for image in images
-            if getattr(image, "lifecycle_state", "AVAILABLE") == "AVAILABLE"
-            and image.operating_system == OPERATING_SYSTEM
-            and image.operating_system_version == OS_VERSION
-            and (not IMAGE_NAME_FILTER or IMAGE_NAME_FILTER.lower() in (getattr(image, "display_name", "") or "").lower())
+            if image.operating_system == OPERATING_SYSTEM
+            and image.operating_system_version == "24.04 Minimal aarch64"
+            and "Canonical-Ubuntu-24.04-Minimal-aarch64-" in image.display_name
         ]
+
         if not matching_images:
             raise ValueError(
-                "No matching OCI image found. "
-                f"OS={OPERATING_SYSTEM!r}, OS_VERSION={OS_VERSION!r}, "
-                f"IMAGE_NAME_FILTER={IMAGE_NAME_FILTER!r}, shape={OCI_COMPUTE_SHAPE!r}. "
-                "Available images were written to images_list.json. "
-                "Set OCI_IMAGE_ID to use an exact image OCID."
+                f"No matching OCI image found for "
+                f"Canonical Ubuntu 24.04 Minimal aarch64. "
+                f"Available images were written to images_list.json."
             )
-        if len(matching_images) > 1:
-            matching_details = [
-                {"display_name": getattr(image, "display_name", None), "id": image.id}
-                for image in matching_images
-            ]
-            logging.error("Multiple matching OCI images: %s", matching_details)
-            raise ValueError(
-                "Multiple OCI images match the configured OS, version, and image filter: "
-                f"{matching_details}. Set OCI_IMAGE_ID=<exact-image-ocid> to select one."
-            )
+
+        # Select the newest dated image returned by OCI.
+        matching_images.sort(
+            key=lambda image: (
+                getattr(image, "time_created", None) or "",
+                image.display_name,
+            ),
+            reverse=True,
+        )
+
         selected_image = matching_images[0]
         oci_image_id = selected_image.id
-        image_display_name = getattr(selected_image, "display_name", "")
-        logging.info("OCI_IMAGE_ID: %s", oci_image_id)
-        logging.info("OCI_IMAGE_NAME: %s", image_display_name)
+        image_display_name = selected_image.display_name
+
+        logging.info(
+            "Selected newest OCI image: %s (%s)",
+            image_display_name,
+            oci_image_id,
+        )
+        print(
+            f" Selected image: {image_display_name}",
+            flush=True
+        )
     else:
         oci_image_id = OCI_IMAGE_ID
+        image_display_name = "OCI_IMAGE_ID override"
 
     assign_public_ip = ASSIGN_PUBLIC_IP.lower() in ["true", "1", "y", "yes"]
     boot_volume_size = max(50, int(BOOT_VOLUME_SIZE))
