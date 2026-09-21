@@ -1,0 +1,26 @@
+# OCI credentials and local configuration
+oci_config
+oci_api_private_key.pem
+*_private
+*.pem
+
+# Environment files / local secrets
+.oci/
+oci.env.bak
+
+# Runtime keys, logs and generated state
+*.log
+INSTANCE_CREATED
+images_list.json
+python_error.log
+
+# Local Python environment
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/
